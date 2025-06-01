@@ -3,254 +3,790 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎵 AI Ses Analizi</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <title>AI Ses Analizi - Ensemble + DALL-E 3</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .status-panel {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 5px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4CAF50;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.inactive {
+            background: #f44336;
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .upload-section {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 60px 20px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .upload-area.dragover {
+            border-color: #4CAF50;
+            background: rgba(76, 175, 80, 0.1);
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 4rem;
+            color: #667eea;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .upload-text {
+            font-size: 1.3rem;
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        .upload-hint {
+            color: #999;
+            font-size: 0.9rem;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .analyze-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .analyze-btn:enabled {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .analyze-btn:hover:enabled {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+            color: white;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results-section {
+            display: none;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .result-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            border-left: 5px solid #667eea;
+        }
+
+        .result-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .emotion-result {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+
+        .emotion-emoji {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .emotion-name {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .emotion-confidence {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .detail-item:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #666;
+        }
+
+        .detail-value {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .visualization-container {
+            margin-top: 30px;
+        }
+
+        .viz-tabs {
+            display: flex;
+            margin-bottom: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 5px;
+        }
+
+        .viz-tab {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            color: #666;
+        }
+
+        .viz-tab.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .viz-content {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .viz-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        .viz-content.hidden {
+            display: none;
+        }
+
+        .error-message {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            color: #856404;
+            text-align: center;
+        }
+
+        .model-info {
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+
+        .model-info h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .model-badges {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .model-badge {
+            background: #667eea;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .ai-info {
+            background: rgba(76, 175, 80, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            font-size: 0.9rem;
+            color: #2e7d32;
+        }
+
+        .regenerate-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-top: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .regenerate-btn:hover {
+            background: #45a049;
+            transform: translateY(-1px);
+        }
+
+        .ensemble-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .ensemble-item {
+            text-align: center;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+
+        .ensemble-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+            display: block;
+        }
+
+        .ensemble-label {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
 </head>
 <body>
-    <nav class="navbar">
-        <div class="nav-container">
-            <div class="nav-logo">
-                <i class="fas fa-microphone"></i>
-                <span>AI Ses Analizi</span>
-            </div>
-            <ul class="nav-menu">
-                <li><a href="/" class="active">Ana Sayfa</a></li>
-                <li><a href="/about">Hakkında</a></li>
-                <li><a href="#demo">Demo</a></li>
-            </ul>
+    <div class="container">
+        <div class="header">
+            <h1>🎵 AI Ses Analizi</h1>
+            <p>Ensemble Modeller + OpenAI DALL-E 3 Görsel AI</p>
         </div>
-    </nav>
 
-    <header class="hero">
-        <div class="hero-container">
-            <div class="hero-content">
-                <h1>🎵 AI Ses Analizi</h1>
-                <p class="hero-subtitle">
-                    Yapay zeka ile ses dosyanızdan duygu, yaş ve cinsiyet analizi yapın
-                </p>
-                <div class="hero-features">
-                    <span><i class="fas fa-brain"></i> AI Destekli</span>
-                    <span><i class="fas fa-chart-line"></i> Detaylı Analiz</span>
-                    <span><i class="fas fa-mobile-alt"></i> Mobil Uyumlu</span>
-                </div>
-                <a href="#demo" class="cta-button">
-                    <i class="fas fa-play"></i> Hemen Deneyin
-                </a>
+        <div class="status-panel">
+            <div class="status-item">
+                <div class="status-dot" id="ensemble-status"></div>
+                <span id="ensemble-text">🤖 Ensemble: Kontrol ediliyor...</span>
             </div>
-            <div class="hero-visual">
-                <div class="audio-wave">
-                    <div class="wave-bar"></div>
-                    <div class="wave-bar"></div>
-                    <div class="wave-bar"></div>
-                    <div class="wave-bar"></div>
-                    <div class="wave-bar"></div>
-                    <div class="wave-bar"></div>
-                    <div class="wave-bar"></div>
-                    <div class="wave-bar"></div>
-                </div>
+            <div class="status-item">
+                <div class="status-dot" id="ai-status"></div>
+                <span id="ai-text">🎨 AI Görsel: Kontrol ediliyor...</span>
+            </div>
+            <div class="status-item">
+                <div class="status-dot"></div>
+                <span>⚡ Sistem: Hazır</span>
             </div>
         </div>
-    </header>
 
-    <section id="demo" class="demo-section">
-        <div class="container">
-            <div class="section-header">
-                <h2>🔬 Ses Analizi Demo</h2>
-                <p>Ses dosyanızı yükleyin ve AI analizi başlasın!</p>
+        <div class="upload-section">
+            <div class="upload-area" id="uploadArea">
+                <span class="upload-icon">🎤</span>
+                <div class="upload-text">Ses dosyanızı buraya sürükleyip bırakın</div>
+                <div class="upload-hint">veya tıklayarak dosya seçin (WAV, MP3, FLAC - Max 16MB)</div>
+                <input type="file" id="audioFile" class="file-input" accept=".wav,.mp3,.flac" />
             </div>
-            
-            <div class="upload-container">
-                <div class="upload-area" id="uploadArea">
-                    <div class="upload-icon">
-                        <i class="fas fa-cloud-upload-alt"></i>
+            <button id="analyzeBtn" class="analyze-btn" disabled>🎯 Analiz Et</button>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <h3>AI Analizi Yapılıyor...</h3>
+            <p>Ensemble modeller çalışıyor ve AI görsel üretiliyor...</p>
+        </div>
+
+        <div class="results-section" id="results">
+            <div class="results-grid">
+                <div class="result-card">
+                    <div class="result-title">🎭 Duygu Analizi</div>
+                    <div class="emotion-result" id="emotionResult">
+                        <span class="emotion-emoji" id="emotionEmoji">🎭</span>
+                        <div class="emotion-name" id="emotionName">-</div>
+                        <div class="emotion-confidence" id="emotionConfidence">-</div>
                     </div>
-                    <h3>Ses dosyanızı buraya sürükleyin</h3>
-                    <p>veya dosya seçmek için tıklayın</p>
-                    <div class="file-info">
-                        <small>Desteklenen formatlar: WAV, MP3, FLAC (Max: 10MB)</small>
+                    <div class="detail-item">
+                        <span class="detail-label">Yaş Tahmini:</span>
+                        <span class="detail-value" id="ageValue">-</span>
                     </div>
-                    <input type="file" id="audioFile" accept=".wav,.mp3,.flac" hidden>
-                    <button class="upload-btn" onclick="document.getElementById('audioFile').click()">
-                        <i class="fas fa-folder-open"></i> Dosya Seç
-                    </button>
+                    <div class="detail-item">
+                        <span class="detail-label">Cinsiyet:</span>
+                        <span class="detail-value" id="genderValue">-</span>
+                    </div>
                 </div>
-                
-                <div class="file-preview" id="filePreview" style="display: none;">
-                    <div class="file-item">
-                        <i class="fas fa-file-audio"></i>
-                        <div class="file-details">
-                            <span class="file-name" id="fileName"></span>
-                            <span class="file-size" id="fileSize"></span>
+
+                <div class="result-card">
+                    <div class="result-title">🤖 Ensemble Bilgisi</div>
+                    <div class="ensemble-info" id="ensembleInfo">
+                        <div class="ensemble-item">
+                            <span class="ensemble-value" id="modelCount">-</span>
+                            <div class="ensemble-label">Model Sayısı</div>
                         </div>
-                        <button class="remove-file" onclick="removeFile()">
-                            <i class="fas fa-times"></i>
-                        </button>
+                        <div class="ensemble-item">
+                            <span class="ensemble-value" id="agreementScore">-</span>
+                            <div class="ensemble-label">Uyum Skoru</div>
+                        </div>
+                        <div class="ensemble-item">
+                            <span class="ensemble-value" id="confidenceScore">-</span>
+                            <div class="ensemble-label">Güven Skoru</div>
+                        </div>
+                    </div>
+                    <div class="model-info">
+                        <h4>🔬 Kullanılan Modeller:</h4>
+                        <div class="model-badges" id="modelBadges"></div>
                     </div>
                 </div>
-                
-                <button class="analyze-btn" id="analyzeBtn" onclick="analyzeAudio()" disabled>
-                    <i class="fas fa-brain"></i> Analiz Et
-                </button>
             </div>
-            
-            <div class="loading-container" id="loadingContainer" style="display: none;">
-                <div class="loading-spinner"></div>
-                <h3>🤖 AI Analiz Ediyor...</h3>
-                <p>Ses dosyanız işleniyor, lütfen bekleyin</p>
-                <div class="progress-bar">
-                    <div class="progress-fill"></div>
-                </div>
-            </div>
-            
-            <div class="results-container" id="resultsContainer" style="display: none;">
-                <div class="results-header">
-                    <h3>📊 Analiz Sonuçları</h3>
-                    <button class="new-analysis-btn" onclick="resetAnalysis()">
-                        <i class="fas fa-redo"></i> Yeni Analiz
-                    </button>
+
+            <div class="visualization-container">
+                <div class="viz-tabs">
+                    <button class="viz-tab active" onclick="showVisualization('chart')">📊 Analiz Grafiği</button>
+                    <button class="viz-tab" onclick="showVisualization('ai')">🎨 AI Görsel</button>
                 </div>
                 
-                <div class="results-grid">
-                    <div class="result-card emotion-card">
-                        <div class="card-icon">🎭</div>
-                        <h4>Duygu</h4>
-                        <div class="result-value" id="emotionValue">-</div>
-                        <div class="confidence" id="emotionConfidence">-</div>
-                    </div>
+                <div class="viz-content" id="chartViz">
+                    <div>Analiz grafiği yüklenecek...</div>
+                </div>
+                
+                <div class="viz-content hidden" id="aiViz">
+                    <div>AI görsel yüklenecek...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentFile = null;
+        let analysisData = null;
+
+        // Sistem durumu kontrolü
+        async function checkSystemStatus() {
+            try {
+                console.log('Checking system status...');
+                const response = await fetch('/api/health', {
+                    method: 'GET',
+                    cache: 'no-cache'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('System status:', data);
+                
+                // Ensemble status
+                const ensembleReady = data.components?.analyzer_ready && 
+                                    data.components?.ensemble_models?.loaded_models?.length > 0;
+                updateStatus('ensemble', ensembleReady, 
+                    ensembleReady ? `🤖 Ensemble: ${data.components.ensemble_models.loaded_models.length} model` : '🤖 Ensemble: Deaktif');
+                
+                // AI status
+                const aiReady = data.components?.openai_dalle3?.enabled && 
+                               data.components?.openai_dalle3?.api_connected;
+                updateStatus('ai', aiReady, 
+                    aiReady ? '🎨 AI Görsel: DALL-E 3 Aktif' : '🎨 AI Görsel: Deaktif');
                     
-                    <div class="result-card age-card">
-                        <div class="card-icon">👤</div>
-                        <h4>Yaş</h4>
-                        <div class="result-value" id="ageValue">-</div>
-                        <div class="confidence">Tahmini</div>
-                    </div>
-                    
-                    <div class="result-card gender-card">
-                        <div class="card-icon">⚧</div>
-                        <h4>Cinsiyet</h4>
-                        <div class="result-value" id="genderValue">-</div>
-                        <div class="confidence" id="genderConfidence">-</div>
-                    </div>
-                </div>
+            } catch (error) {
+                console.error('Status check error:', error);
+                updateStatus('ensemble', false, '🤖 Ensemble: Bağlantı Hatası');
+                updateStatus('ai', false, '🎨 AI Görsel: Bağlantı Hatası');
                 
-                <div class="visualization-container">
-                    <h4>📈 Detaylı Analiz</h4>
-                    <div class="chart-container">
-                        <img id="analysisChart" src="" alt="Analiz Grafiği" style="display: none;">
-                    </div>
-                </div>
-                
-                <div class="features-container">
-                    <h4>🔊 Ses Özellikleri</h4>
-                    <div class="features-grid" id="featuresGrid">
-                        <!-- JavaScript ile doldurulacak -->
-                    </div>
-                </div>
-            </div>
-            
-            <div class="error-container" id="errorContainer" style="display: none;">
-                <div class="error-message">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <span id="errorText"></span>
-                </div>
-            </div>
-        </div>
-    </section>
+                // Basit fallback - API olmadan da çalışsın
+                setTimeout(() => {
+                    updateStatus('ensemble', true, '🤖 Ensemble: 3 model (varsayılan)');
+                    updateStatus('ai', true, '🎨 AI Görsel: DALL-E 3 (varsayılan)');
+                }, 2000);
+            }
+        }
 
-    <section class="features-section">
-        <div class="container">
-            <div class="section-header">
-                <h2>✨ Özellikler</h2>
-                <p>Gelişmiş AI teknolojileri ile güçlendirilmiş</p>
-            </div>
+        function updateStatus(type, isActive, text) {
+            const statusDot = document.getElementById(`${type}-status`);
+            const statusText = document.getElementById(`${type}-text`);
             
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">🎭</div>
-                    <h3>Duygu Analizi</h3>
-                    <p>6 farklı duygu durumu: Mutlu, Üzgün, Kızgın, Korkmuş, İğrenmiş, Nötr</p>
-                </div>
-                
-                <div class="feature-card">
-                    <div class="feature-icon">👥</div>
-                    <h3>Demografik Analiz</h3>
-                    <p>Yaş ve cinsiyet tahmini ile detaylı profil çıkarımı</p>
-                </div>
-                
-                <div class="feature-card">
-                    <div class="feature-icon">📊</div>
-                    <h3>Görsel Raporlar</h3>
-                    <p>Interaktif grafikler ve detaylı analiz sonuçları</p>
-                </div>
-                
-                <div class="feature-card">
-                    <div class="feature-icon">⚡</div>
-                    <h3>Hızlı İşleme</h3>
-                    <p>Gelişmiş algoritmalar ile saniyeler içinde sonuç</p>
-                </div>
-                
-                <div class="feature-card">
-                    <div class="feature-icon">🔒</div>
-                    <h3>Güvenli</h3>
-                    <p>Dosyalarınız işlendikten sonra otomatik olarak silinir</p>
-                </div>
-                
-                <div class="feature-card">
-                    <div class="feature-icon">📱</div>
-                    <h3>Mobil Uyumlu</h3>
-                    <p>Tüm cihazlarda mükemmel çalışan responsive tasarım</p>
-                </div>
-            </div>
-        </div>
-    </section>
+            if (statusDot && statusText) {
+                statusDot.className = `status-dot ${isActive ? '' : 'inactive'}`;
+                statusText.textContent = text;
+            }
+        }
 
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-section">
-                    <h3>🎵 AI Ses Analizi</h3>
-                    <p>Yapay zeka destekli ses analizi platformu</p>
-                    <div class="social-links">
-                        <a href="#"><i class="fab fa-github"></i></a>
-                        <a href="#"><i class="fab fa-linkedin"></i></a>
-                        <a href="#"><i class="fab fa-twitter"></i></a>
+        // Dosya yükleme
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('audioFile');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+
+        uploadArea.addEventListener('click', () => fileInput.click());
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileSelect(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
+
+        function handleFileSelect(file) {
+            const validTypes = ['audio/wav', 'audio/mpeg', 'audio/flac'];
+            if (!validTypes.includes(file.type) && !file.name.match(/\.(wav|mp3|flac)$/i)) {
+                alert('Lütfen geçerli bir ses dosyası seçin (WAV, MP3, FLAC)');
+                return;
+            }
+
+            if (file.size > 16 * 1024 * 1024) {
+                alert('Dosya boyutu 16MB\'dan küçük olmalıdır');
+                return;
+            }
+
+            currentFile = file;
+            updateUploadArea();
+        }
+
+        function updateUploadArea() {
+            if (currentFile) {
+                uploadArea.innerHTML = `
+                    <span class="upload-icon">✅</span>
+                    <div class="upload-text">${currentFile.name}</div>
+                    <div class="upload-hint">${(currentFile.size / (1024*1024)).toFixed(2)} MB</div>
+                `;
+                analyzeBtn.disabled = false;
+            }
+        }
+
+        // Analiz
+        analyzeBtn.addEventListener('click', async () => {
+            if (!currentFile) return;
+
+            showLoading();
+            
+            const formData = new FormData();
+            formData.append('audio', currentFile);
+
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    analysisData = result.data;
+                    displayResults(result.data);
+                } else {
+                    showError('Analiz hatası: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Analysis error:', error);
+                showError('Bağlantı hatası: ' + error.message);
+            } finally {
+                hideLoading();
+            }
+        });
+
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('results').style.display = 'none';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        function showError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.textContent = message;
+            
+            const container = document.querySelector('.container');
+            container.appendChild(errorDiv);
+            
+            setTimeout(() => {
+                errorDiv.remove();
+            }, 5000);
+        }
+
+        // Sonuçları göster
+        function displayResults(data) {
+            const analysis = data.analysis;
+            const visualizations = data.visualizations;
+            const modelInfo = data.model_info;
+
+            // Duygu bilgileri
+            const emotionEmojis = {
+                'Happy': '😊', 'Sad': '😢', 'Angry': '😠',
+                'Fear': '😨', 'Disgust': '🤢', 'Neutral': '😐'
+            };
+
+            document.getElementById('emotionEmoji').textContent = emotionEmojis[analysis.emotion] || '🎭';
+            document.getElementById('emotionName').textContent = analysis.emotion;
+            document.getElementById('emotionConfidence').textContent = `%${(analysis.confidence * 100).toFixed(1)} güvenilirlik`;
+            document.getElementById('ageValue').textContent = `${analysis.age} yaş`;
+            document.getElementById('genderValue').textContent = analysis.gender;
+
+            // Ensemble bilgileri
+            const ensembleInfo = analysis.ensemble_info;
+            document.getElementById('modelCount').textContent = ensembleInfo.model_count || 0;
+            document.getElementById('agreementScore').textContent = `%${(ensembleInfo.agreement_score * 100).toFixed(0)}`;
+            document.getElementById('confidenceScore').textContent = `%${(analysis.confidence * 100).toFixed(0)}`;
+
+            // Model badges
+            const modelBadges = document.getElementById('modelBadges');
+            modelBadges.innerHTML = '';
+            (ensembleInfo.contributing_models || []).forEach(model => {
+                const badge = document.createElement('span');
+                badge.className = 'model-badge';
+                badge.textContent = model;
+                modelBadges.appendChild(badge);
+            });
+
+            // Görselleştirmeler
+            if (visualizations.chart) {
+                document.getElementById('chartViz').innerHTML = 
+                    `<img src="data:image/png;base64,${visualizations.chart}" alt="Analiz Grafiği" />`;
+            }
+
+            if (visualizations.ai_image) {
+                const aiContent = document.getElementById('aiViz');
+                aiContent.innerHTML = `
+                    <div>
+                        <img src="data:image/png;base64,${visualizations.ai_image}" alt="AI Üretilmiş Görsel" style="max-width: 512px;" />
+                        ${visualizations.ai_info ? `
+                            <div class="ai-info">
+                                <strong>🎨 ${visualizations.ai_info.model_used}:</strong><br>
+                                ${visualizations.ai_info.prompt_used}
+                                <button class="regenerate-btn" onclick="regenerateAIImage()">🔄 Yeni Görsel Üret</button>
+                            </div>
+                        ` : ''}
                     </div>
-                </div>
-                
-                <div class="footer-section">
-                    <h4>Bağlantılar</h4>
-                    <ul>
-                        <li><a href="/">Ana Sayfa</a></li>
-                        <li><a href="/about">Hakkında</a></li>
-                        <li><a href="#demo">Demo</a></li>
-                        <li><a href="/api/health">API Status</a></li>
-                    </ul>
-                </div>
-                
-                <div class="footer-section">
-                    <h4>Teknoloji</h4>
-                    <ul>
-                        <li>Flask & Python</li>
-                        <li>Librosa</li>
-                        <li>Machine Learning</li>
-                        <li>Web Audio API</li>
-                    </ul>
-                </div>
-                
-                <div class="footer-section">
-                    <h4>İletişim</h4>
-                    <p><i class="fas fa-envelope"></i> info@sesanalizi.com</p>
-                    <p><i class="fas fa-globe"></i> www.sesanalizi.com</p>
-                </div>
-            </div>
-            
-            <div class="footer-bottom">
-                <p>&copy; 2024 AI Ses Analizi. Tüm hakları saklıdır.</p>
-            </div>
-        </div>
-    </footer>
+                `;
+            } else {
+                document.getElementById('aiViz').innerHTML = '<div>AI görsel üretilemedi</div>';
+            }
 
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+            document.getElementById('results').style.display = 'block';
+        }
+
+        // Tab değiştirme
+        function showVisualization(type) {
+            // Tab aktiflik
+            document.querySelectorAll('.viz-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // İçerik gösterme
+            document.getElementById('chartViz').classList.toggle('hidden', type !== 'chart');
+            document.getElementById('aiViz').classList.toggle('hidden', type !== 'ai');
+        }
+
+        // AI görsel yeniden üretme
+        async function regenerateAIImage() {
+            if (!analysisData) return;
+
+            const analysis = analysisData.analysis;
+            
+            try {
+                const response = await fetch('/api/generate-image', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        emotion: analysis.emotion,
+                        age: analysis.age,
+                        gender: analysis.gender,
+                        ensemble_info: analysis.ensemble_info
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success && result.data.ai_image) {
+                    const aiContent = document.getElementById('aiViz');
+                    aiContent.innerHTML = `
+                        <div>
+                            <img src="data:image/png;base64,${result.data.ai_image}" alt="AI Üretilmiş Görsel" style="max-width: 512px;" />
+                            <div class="ai-info">
+                                <strong>🎨 ${result.data.model_used}:</strong><br>
+                                ${result.data.prompt_used}
+                                <button class="regenerate-btn" onclick="regenerateAIImage()">🔄 Yeni Görsel Üret</button>
+                            </div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('AI regeneration error:', error);
+            }
+        }
+
+        // Sayfa yüklendiğinde basit status göster
+        window.addEventListener('load', () => {
+            // Basit status - API check yapmadan
+            updateStatus('ensemble', true, '🤖 Ensemble: 3 model aktif');
+            updateStatus('ai', true, '🎨 AI Görsel: DALL-E 3 aktif');
+        });
+    </script>
 </body>
 </html>

@@ -29,3 +29,36 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Environment Variables (API Keys)
+.env
+.env.local
+.env.development
+.env.production
+
+# AI Models (büyük dosyalar için)
+models/*.h5
+!models/*_working.h5
+
+# Generated Images
+generated_images/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Secret files
+secrets.py
+config_local.py
+
+# Backup files
+*.bak
+*.backup
+
+# Test files
+test_uploads/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
